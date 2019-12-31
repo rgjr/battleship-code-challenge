@@ -1,0 +1,13 @@
+version: '3.1'
+
+services:
+  mysql-server:
+    image: mysql:5.5
+    ports:
+      - '3306:3306'
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: battleship
+      MYSQL_USER: user
+      MYSQL_PASSWORD: root
+    command: mysqld --init-file="/tmp/database/install_db.sql"
