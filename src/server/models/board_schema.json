@@ -1,0 +1,20 @@
+{
+  "board": {
+    "id": "tableName",
+    "gameId": "gameId",
+    "player": "playerId",
+    "playerGrid": [
+      {
+        "position": "gridPosition",
+        "usedState": 0,
+        "hitState": 0
+      }
+    ],
+    "enemyGrid": [
+      {
+        "usedState": 0,
+        "hitState": 0
+      }
+    ]
+  }
+}
