@@ -3,7 +3,7 @@ const http = require('http')
 const path = require('path')
 const bodyParser = require('body-parser')
 const mysql = require('mysql')
-const col = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']
+const tables = ['p1_board', 'p1_enemy_board', 'p2_board', 'p2_enemy_board']
 
 /***************************************
  * SETUP
@@ -47,7 +47,7 @@ db.connect(err => {
  * GET
  ****/
 
- // Example Get Response
+// Example Get Response
 app.get('/api/getList', (req, res) => {
   const list = ['item1', 'item2', 'item3']
   res.json(list)
@@ -90,7 +90,7 @@ app.get('/api/game/board/:name', (req, res) => {
 
     res.send({
       name,
-      data: result
+      data: result,
     })
   })
 })
@@ -142,6 +142,26 @@ app.get('/api/game/board/:name/:row/:cell', (req, res) => {
   })
 })
 
+// GET Ships
+app.get('/api/game/ships', (req, res) => {
+  const query = `SELECT * FROM ships`
+
+  // execute query
+  db.query(query, (err, result) => {
+    if (err) {
+      res.send(`mysql failed to connect ${err}`)
+    } else if (result.length === 0) {
+      return res.send({
+        error: 'No ships exist.',
+      })
+    }
+
+    res.send({
+      ships: result,
+    })
+  })
+})
+
 /*****
  * POST
  *****/
@@ -166,52 +186,89 @@ app.post('/api/createPlayers/', (req, res) => {
  * {Board} will be dropped first
  * {Board} will be recreated
  * {Board} will then have rows and columns autofilled with 0 as values
+ * NOTE: Really ugly but it gets the job done
  */
-app.post('/api/board/:name/reset', (req, res) => {
+app.post('/api/game/board/setup', (req, res) => {
   const name = req.params.name
-  const delete_query = `DROP TABLE IF EXISTS ${name}`
-  const create_query = `CREATE TABLE IF NOT EXISTS ${name} (
-    id int(11) unsigned NOT NULL AUTO_INCREMENT,
-    A int(11) DEFAULT '0',
-    B int(11) DEFAULT '0',
-    C int(11) DEFAULT '0',
-    D int(11) DEFAULT '0',
-    E int(11) DEFAULT '0',
-    F int(11) DEFAULT '0',
-    G int(11) DEFAULT '0',
-    H int(11) DEFAULT '0',
-    I int(11) DEFAULT '0',
-    J int(11) DEFAULT '0',
-    PRIMARY KEY (id)
-  )`
+  let delete_query, delete_boards
+  let create_query, create_boards
+  let insert_values
 
   async function reset() {
     let results = []
 
+    for (let i = 0; i < tables.length; i++) {
+      delete_query = `DROP TABLE IF EXISTS ${tables[i]}`
+      create_query = `CREATE TABLE IF NOT EXISTS ${tables[i]} (
+        id int(11) unsigned NOT NULL AUTO_INCREMENT,
+        A int(11) DEFAULT '0',
+        B int(11) DEFAULT '0',
+        C int(11) DEFAULT '0',
+        D int(11) DEFAULT '0',
+        E int(11) DEFAULT '0',
+        F int(11) DEFAULT '0',
+        G int(11) DEFAULT '0',
+        H int(11) DEFAULT '0',
+        I int(11) DEFAULT '0',
+        J int(11) DEFAULT '0',
+        PRIMARY KEY (id)
+      )`
 
-    let delete_board = await db.query(delete_query, (err, result) => {
-      if (err) throw err
-      results.push(result)
-    })
-
-    let create_board = await db.query(create_query, (err, result) => {
-      if (err) throw err
-      results.push(result)
-    })
-
-    let insert_values
-
-    for(let i = 0; i < 10; i++) {
-      insert_values = await db.query(`INSERT INTO ${name}(id) VALUES (${i + 1})`, (err, result) => {
+      delete_boards = await db.query(delete_query, (err, result) => {
         if (err) throw err
+
         results.push(result)
       })
+
+      create_boards = await db.query(create_query, (err, result) => {
+        if (err) throw err
+
+        results.push(result)
+      })
+    }
+
+    // TODO: Change to arr.forEach()?
+    for (let i = 0; i < tables.length; i++) {
+      for (let j = 0; j < 10; j++) {
+        insert_values = await db.query(
+          `INSERT INTO ${tables[i]}(id) VALUES (${j + 1})`,
+          (err, result) => {
+            if (err) throw err
+
+            results.push(result)
+          },
+        )
+      }
     }
   }
 
   reset().then(result => {
     res.send(result)
   })
+})
+
+// Randomize ship placement
+app.post('/api/game/ships/:id', (req, res) => {
+  // randomize horizontal or vertical
+
+  async function data() {
+    const direction = ['horizontal', 'vertical']
+    const random_direction = direction[Math.floor(Math.random() * direction.length)]
+
+    const ship = await db.query(`SELECT * FROM ships WHERE id='${req.params.id}'`, function(
+      err,
+      result,
+    ) {
+      if (err) throw err
+
+      res.send({
+        directon: random_direction,
+        ship: result,
+      })
+    })
+  }
+
+  data().catch(error => console.error)
 })
 
 // Handles any requests that don't match the ones above
