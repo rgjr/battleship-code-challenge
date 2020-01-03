@@ -249,18 +249,19 @@ app.post('/api/game/board/setup', (req, res) => {
 
 // Randomize ship placement
 app.post('/api/game/ships/:id', (req, res) => {
-  // randomize horizontal or vertical
-
   async function data() {
+    // Randomize horizontal or vertical
     const direction = ['horizontal', 'vertical']
     const random_direction = direction[Math.floor(Math.random() * direction.length)]
 
+    // Return ship info for location and placement
     const ship = await db.query(`SELECT * FROM ships WHERE id='${req.params.id}'`, function(
       err,
       result,
     ) {
       if (err) throw err
 
+      // Still need to set up placement of ships on game board
       res.send({
         directon: random_direction,
         ship: result,
