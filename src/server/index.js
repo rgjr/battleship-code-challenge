@@ -3,6 +3,7 @@ const http = require('http')
 const path = require('path')
 const bodyParser = require('body-parser')
 const mysql = require('mysql')
+const index = require('./routes/index')
 const tables = ['p1_board', 'p1_enemy_board', 'p2_board', 'p2_enemy_board']
 
 /***************************************
@@ -13,9 +14,42 @@ const tables = ['p1_board', 'p1_enemy_board', 'p2_board', 'p2_enemy_board']
 const app = express()
 const server = new http.Server(app)
 
+app.use(index)
 app.use(express.static('../build'))
 app.use(bodyParser.urlencoded({ extended: false }))
 app.use(bodyParser.json())
+
+/***************************************
+ * SOCKET.IO
+ ***************************************/
+const io = require('socket.io')(server, { transports: ['websocket'] }).listen(server)
+
+/**
+ * The .on() method takes two arguments:
+ *    - the name of the event (ex. 'connect')
+ *    - a callback that is executed after every 'connect' event
+ * */
+io.on('connect', socket => {
+  socket.on('connect', message => {
+    // io.sockets.emit('connect', 'test')
+    socket.emit('connect', message)
+  })
+
+  socket.on('connection', message => {
+    console.log(message)
+    socket.emit('connection', message)
+    // socket.emit('connection', ['can you hear me?', 1, 2, 'abc'])
+  })
+
+  socket.on('disconnect', message => {
+    console.log(server)
+    console.log(`Client disconnected [id=${socket.id}] `)
+    socket.emit('connection', message)
+    // socket.emit('connection', ['can you hear me?', 1, 2, 'abc'])
+  })
+
+  // socket.on('disconnect', () => console.log(`Client disconnected [id=${socket.id}] `))
+})
 
 /***************************************
  * DB CONNECTION
@@ -286,3 +320,11 @@ const port = process.env.PORT || 8001
 server.listen(port, () => {
   console.log(`Started http server on ${port}`)
 })
+
+// setInterval(() => {
+//   let result = client.emit('connect', (response) => response)
+
+//   console.log('RESULT: ', result)
+
+//   console.log(client.connected)
+// }, 3000)
